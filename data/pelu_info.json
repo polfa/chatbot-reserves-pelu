@@ -1,0 +1,15 @@
+{
+  "nombre": "Peluquería Bella",
+  "horario": "Lunes a Sábado, 9h-19h",
+  "servicios": {
+    "Corte": 15,
+    "Coloración": 30,
+    "Peinado": 20
+  },
+  "dirección": "Carrer Gran, 123",
+  "duraciones": {
+    "Corte": 30,
+    "Coloración": 60,
+    "Peinado": 45
+  }
+}
