@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from datetime import datetime
 from backend.google_calendar import create_event
-from backend.chatbot import extract_date_from_message, extract_name_from_message, get_bot_introduction
+from backend.chatbot_groq import extract_date_from_message, extract_name_from_message, get_bot_introduction
 
 from fastapi.middleware.cors import CORSMiddleware
 
