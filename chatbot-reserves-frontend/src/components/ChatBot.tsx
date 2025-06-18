@@ -17,7 +17,7 @@ const ChatBot = () => {
   ]);
   const [currentMessage, setCurrentMessage] = useState("");
 
-  const stepRef = useRef(0); // Reemplaza el contador global
+  const stepRef = useRef(0);
 
   const handleSubmit = async () => {
     setConversation(prev => [...prev, { text: "Procesando tu reserva...", sender: 'bot' }]);
@@ -34,49 +34,79 @@ const ChatBot = () => {
     }
   };
 
-  const handleSendMessage = () => {
+const validateName = async (message: string) => {
+  try {
+    const res = await axios.post("http://localhost:8000/name_from_message", { message });
+    return res.data.message; // <- nombre devuelto por el backend
+  } catch {
+    return "ERROR";
+  }
+};
+
+const validateDate = async (message: string) => {
+  try {
+    const res = await axios.post("http://localhost:8000/date_from_message", { message });
+    return res.data.message; // <- fecha devuelta por el backend
+  } catch {
+    return "ERROR";
+  }
+};
+
+  const handleSendMessage = async () => {
     const trimmed = currentMessage.trim();
     if (!trimmed) return;
 
-    // Añadir mensaje del usuario
     setConversation(prev => [...prev, { text: trimmed, sender: 'user' }]);
+    setCurrentMessage("");
 
-    // Procesar paso actual
     const step = stepRef.current;
     let nextBotMessage = "";
 
-    switch (step) {
-      case 0:
-        setClientName(trimmed);
-        nextBotMessage = "Encantado, " + trimmed + ". ¿Qué servicio te gustaría reservar?";
-        break;
-      case 1:
-        setService(trimmed);
-        nextBotMessage = "Perfecto. ¿Qué día y hora te va bien? (formato ISO: YYYY-MM-DDTHH:MM)";
-        break;
-      case 2:
-        setDateTime(trimmed);
-        nextBotMessage = "¿Cuánto tiempo durará el servicio? (en minutos)";
-        break;
-      case 3:
-        const mins = parseInt(trimmed);
-        if (isNaN(mins) || mins <= 0) {
-          setConversation(prev => [...prev, { text: "Por favor, indica un número válido en minutos.", sender: 'bot' }]);
-          setCurrentMessage("");
-          return;
-        }
-        setDuration(mins);
-        nextBotMessage = "¡Gracias! Enviando tu reserva...";
-        handleSubmit();
-        break;
-      default:
-        nextBotMessage = "La conversación ha terminado. Puedes empezar otra si lo deseas.";
-        break;
+    if (step === 0) {
+      // Validar nombre en backend
+      const name = await validateName(trimmed);
+      if (name === "ERROR") {
+        setConversation(prev => [...prev, { text: "No entendí tu nombre, por favor intenta de nuevo.", sender: 'bot' }]);
+        return;
+      }
+      setClientName(name);
+      nextBotMessage = `Encantado, ${name}. ¿Qué servicio te gustaría reservar?`;
+      stepRef.current += 1;
+    }
+    else if (step === 1) {
+      // Guardamos el servicio directamente, sin validar con IA
+      setService(trimmed);
+      nextBotMessage = "Perfecto. ¿Qué día y hora te va bien? (puedes escribirlo como 'mañana a las 16:00')";
+      stepRef.current += 1;
+    }
+    else if (step === 2) {
+      // Validar fecha en backend
+      const isoDate = await validateDate(trimmed);
+      if (isoDate === "ERROR") {
+        setConversation(prev => [...prev, { text: "No pude entender la fecha. Intenta algo como 'mañana a las 16:00'", sender: 'bot' }]);
+        return;
+      }
+      setDateTime(isoDate);
+      nextBotMessage = "¿Cuánto tiempo durará el servicio? (en minutos)";
+      stepRef.current += 1;
+    }
+    else if (step === 3) {
+      const mins = parseInt(trimmed);
+      if (isNaN(mins) || mins <= 0) {
+        setConversation(prev => [...prev, { text: "Por favor, indica un número válido en minutos.", sender: 'bot' }]);
+        return;
+      }
+      setDuration(mins);
+      nextBotMessage = "¡Gracias! Enviando tu reserva...";
+      stepRef.current += 1;
+      setConversation(prev => [...prev, { text: nextBotMessage, sender: 'bot' }]);
+      await handleSubmit();
+      return;
+    } else {
+      nextBotMessage = "La conversación ha terminado. Si quieres hacer otra reserva, recarga la página.";
     }
 
-    stepRef.current += 1;
     setConversation(prev => [...prev, { text: nextBotMessage, sender: 'bot' }]);
-    setCurrentMessage("");
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -111,8 +141,9 @@ const ChatBot = () => {
           onChange={(e) => setCurrentMessage(e.target.value)}
           onKeyDown={handleKeyPress}
           placeholder="Escribe tu mensaje..."
+          disabled={stepRef.current > 3} // Bloquea cuando termina la reserva
         />
-        <button onClick={handleSendMessage}>Enviar</button>
+        <button onClick={handleSendMessage} disabled={stepRef.current > 3}>Enviar</button>
       </div>
     </div>
   );
