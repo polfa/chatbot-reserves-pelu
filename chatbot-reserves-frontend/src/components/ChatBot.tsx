@@ -1,152 +1,250 @@
 // src/components/ChatBot.tsx
-import { useState, useRef } from "react";
-import axios from "axios";
+import { useState } from "react";
+import * as api from "./Api"
 
 interface Message {
   text: string;
-  sender: 'user' | 'bot';
+  sender: "user" | "bot";
 }
 
+export const Steps = {
+  AskName: 0,
+  AskService: 1,
+  AskEmpleat: 2,
+  AskDate: 3,
+  Completed: 4,
+} as const;
+
+export type Steps = typeof Steps[keyof typeof Steps];
+
+
 const ChatBot = () => {
-  const [clientName, setClientName] = useState("");
-  const [service, setService] = useState("");
-  const [dateTime, setDateTime] = useState("");
-  const [duration, setDuration] = useState(30);
   const [conversation, setConversation] = useState<Message[]>([
-    { text: "¡Hola! Soy tu asistente de reservas. ¿Cómo te llamas?", sender: 'bot' }
+    { text: "¡Hola! Soy tu asistente de reservas. ¿Cómo te llamas?", sender: "bot" },
   ]);
   const [currentMessage, setCurrentMessage] = useState("");
+  const [step, setStep] = useState<Steps>(Steps.AskName);
 
-  const stepRef = useRef(0);
+  const [clientName, setClientName] = useState("");
+  const [service, setService] = useState("");
+  const [workerName, setWorkerName] = useState("");
+  const [dateTime, setDateTime] = useState("");
 
-  const handleSubmit = async () => {
-    setConversation(prev => [...prev, { text: "Procesando tu reserva...", sender: 'bot' }]);
-    try {
-      await axios.post("http://localhost:8000/reserva", {
-        client_name: clientName,
-        service,
-        iso_datetime: dateTime,
-        duration_minutes: duration,
-      });
-      setConversation(prev => [...prev, { text: "✅ ¡Reserva creada con éxito!", sender: 'bot' }]);
-    } catch (error) {
-      setConversation(prev => [...prev, { text: "❌ Error al hacer la reserva.", sender: 'bot' }]);
-    }
+  // Añade mensaje a la conversación
+  const addBotMessage = (text: string) => {
+    setConversation((prev) => [...prev, { text, sender: "bot" }]);
   };
 
-const validateName = async (message: string) => {
-  try {
-    const res = await axios.post("http://localhost:8000/name_from_message", { message });
-    return res.data.message; // <- nombre devuelto por el backend
-  } catch {
-    return "ERROR";
-  }
-};
-
-const validateDate = async (message: string) => {
-  try {
-    const res = await axios.post("http://localhost:8000/date_from_message", { message });
-    return res.data.message; // <- fecha devuelta por el backend
-  } catch {
-    return "ERROR";
-  }
-};
+  const addUserMessage = (text: string) => {
+    setConversation((prev) => [...prev, { text, sender: "user" }]);
+  };
 
   const handleSendMessage = async () => {
     const trimmed = currentMessage.trim();
     if (!trimmed) return;
 
-    setConversation(prev => [...prev, { text: trimmed, sender: 'user' }]);
+    addUserMessage(trimmed);
     setCurrentMessage("");
 
-    const step = stepRef.current;
-    let nextBotMessage = "";
+    switch (step) {
+      case Steps.AskName: {
+        const name = await api.postNameFromMessage(trimmed);
+        if (name === "ERROR") {
+          addBotMessage("No entendí tu nombre, por favor intenta de nuevo.");
+          return;
+        }
+        setClientName(name);
+        const services = await api.getServices();
+        if (services === "ERROR") {
+          addBotMessage(`Encantado, ${name}. Pero no pude obtener los servicios disponibles. Intenta más tarde.`);
+        } else {
+          addBotMessage(`Encantado, ${name}. ¿Qué servicio te gustaría reservar?\nOpciones: ${services.join(", ")}`);
+          setStep(Steps.AskService);
+        }
+        break;
+      }
+      case Steps.AskService: {
+        const s = await api.postServiceFromMessage(trimmed);
+        if (s === "ERROR") {
+          addBotMessage("No entendí el tipo de servicio, por favor intenta de nuevo.");
+          return;
+        }
+        setService(s);
+        const empleats_str = await api.getEmpleats(s);
+        addBotMessage(`Has elegido el servicio: ${s}. Estos son los empleados que tenemos para este servicio: ${empleats_str}. ¿Cuál quieres? Si no es el servicio que quieres escribe NO.`);
+        setStep(Steps.AskEmpleat);
+        break;
+      }
+      case Steps.AskEmpleat: {
+        const e = await api.postEmpleatFromMessage(trimmed);
+        if (e === "ERROR") {
+          addBotMessage("No pude encontrar el empleado que te pidieron. Intenta algo como 'NO'");
+          return;
+        }
+        if (e === "NO") {
+          addBotMessage("Escribe el tipo de servicio que quieres reservar.");
+          setStep(Steps.AskService);
+          return;
+        }
+        setWorkerName(e);
+        addBotMessage(`Perfecto con ${e}. ¿Qué día y hora te va bien? (puedes escribirlo como 'mañana a las 16:00')`);
+        setStep(Steps.AskDate);
+        break;
+      }
+      case Steps.AskDate: {
+        const isoDate = await api.postDateFromMessage(trimmed);
+        if (isoDate === "ERROR") {
+          addBotMessage("No pude entender la fecha. Intenta algo como 'mañana a las 16:00'");
+          return;
+        }
+        setDateTime(isoDate);
+        addBotMessage("¡Gracias! Enviando tu reserva...");
 
-    if (step === 0) {
-      // Validar nombre en backend
-      const name = await validateName(trimmed);
-      if (name === "ERROR") {
-        setConversation(prev => [...prev, { text: "No entendí tu nombre, por favor intenta de nuevo.", sender: 'bot' }]);
-        return;
-      }
-      setClientName(name);
-      nextBotMessage = `Encantado, ${name}. ¿Qué servicio te gustaría reservar?`;
-      stepRef.current += 1;
-    }
-    else if (step === 1) {
-      // Guardamos el servicio directamente, sin validar con IA
-      setService(trimmed);
-      nextBotMessage = "Perfecto. ¿Qué día y hora te va bien? (puedes escribirlo como 'mañana a las 16:00')";
-      stepRef.current += 1;
-    }
-    else if (step === 2) {
-      // Validar fecha en backend
-      const isoDate = await validateDate(trimmed);
-      if (isoDate === "ERROR") {
-        setConversation(prev => [...prev, { text: "No pude entender la fecha. Intenta algo como 'mañana a las 16:00'", sender: 'bot' }]);
-        return;
-      }
-      setDateTime(isoDate);
-      nextBotMessage = "¿Cuánto tiempo durará el servicio? (en minutos)";
-      stepRef.current += 1;
-    }
-    else if (step === 3) {
-      const mins = parseInt(trimmed);
-      if (isNaN(mins) || mins <= 0) {
-        setConversation(prev => [...prev, { text: "Por favor, indica un número válido en minutos.", sender: 'bot' }]);
-        return;
-      }
-      setDuration(mins);
-      nextBotMessage = "¡Gracias! Enviando tu reserva...";
-      stepRef.current += 1;
-      setConversation(prev => [...prev, { text: nextBotMessage, sender: 'bot' }]);
-      await handleSubmit();
-      return;
-    } else {
-      nextBotMessage = "La conversación ha terminado. Si quieres hacer otra reserva, recarga la página.";
-    }
+        const success = await api.postReserva({
+          client_name: clientName,
+          service,
+          iso_datetime: isoDate,
+          nom_empleat: workerName,
+        });
 
-    setConversation(prev => [...prev, { text: nextBotMessage, sender: 'bot' }]);
+        if (success) {
+          addBotMessage("✅ ¡Reserva creada con éxito!");
+        } else {
+          addBotMessage("❌ Error al hacer la reserva.");
+        }
+        setStep(Steps.Completed);
+        break;
+      }
+      case Steps.Completed:
+        addBotMessage("La conversación ha terminado. Si quieres hacer otra reserva, recarga la página.");
+        break;
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSendMessage();
-    }
+    if (e.key === "Enter") handleSendMessage();
   };
 
-  return (
-    <div style={{ maxWidth: "400px", margin: "0 auto", border: "1px solid #ccc", padding: "10px", borderRadius: "8px" }}>
-      <h2>🤖 ChatBot de reservas</h2>
+return (
+  <div
+    style={{
+      maxWidth: 600,
+      width: "90vw",
+      height: "80vh",
+      margin: "20px auto",
+      border: "1px solid #ccc",
+      borderRadius: 12,
+      display: "flex",
+      flexDirection: "column",
+      backgroundColor: "#fafafa",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    }}
+  >
+    <h2
+      style={{
+        margin: "16px",
+        textAlign: "center",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        color: "#333",
+      }}
+    >
+      🤖 ChatBot de reservas
+    </h2>
 
-      <div style={{ height: "300px", overflowY: "scroll", border: "1px solid #eee", padding: "10px", marginBottom: "10px" }}>
-        {conversation.map((msg, index) => (
-          <div key={index} style={{ textAlign: msg.sender === 'user' ? 'right' : 'left', margin: "5px 0" }}>
-            <span style={{
-              display: "inline-block",
-              padding: "8px",
-              borderRadius: "5px",
-              backgroundColor: msg.sender === 'user' ? '#dcf8c6' : '#f1f0f0'
-            }}>
-              {msg.text}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "flex" }}>
-        <input
-          style={{ flexGrow: 1, marginRight: "10px", padding: "8px" }}
-          value={currentMessage}
-          onChange={(e) => setCurrentMessage(e.target.value)}
-          onKeyDown={handleKeyPress}
-          placeholder="Escribe tu mensaje..."
-          disabled={stepRef.current > 3} // Bloquea cuando termina la reserva
-        />
-        <button onClick={handleSendMessage} disabled={stepRef.current > 3}>Enviar</button>
-      </div>
+    <div
+      style={{
+        flexGrow: 1,
+        overflowY: "auto",
+        padding: "16px",
+        borderTop: "1px solid #eee",
+        borderBottom: "1px solid #eee",
+        backgroundColor: "white",
+      }}
+      id="chat-container"
+    >
+      {conversation.map((msg, i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            justifyContent: msg.sender === "user" ? "flex-end" : "flex-start",
+            marginBottom: 12,
+          }}
+        >
+          <span
+            style={{
+              maxWidth: "70%",
+              padding: "12px 16px",
+              borderRadius: 20,
+              backgroundColor: msg.sender === "user" ? "#4caf50" : "#e0e0e0",
+              color: msg.sender === "user" ? "white" : "#333",
+              fontSize: 16,
+              lineHeight: 1.4,
+              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {msg.text}
+          </span>
+        </div>
+      ))}
     </div>
-  );
-};
+
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSendMessage();
+      }}
+      style={{ display: "flex", padding: "12px", backgroundColor: "#f9f9f9" }}
+    >
+      <input
+        style={{
+          flexGrow: 1,
+          padding: "12px 16px",
+          borderRadius: 24,
+          border: "1px solid #ccc",
+          fontSize: 16,
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          outline: "none",
+          marginRight: 12,
+        }}
+        value={currentMessage}
+        onChange={(e) => setCurrentMessage(e.target.value)}
+        placeholder="Escribe tu mensaje..."
+        disabled={step === Steps.Completed}
+      />
+      <button
+        type="submit"
+        disabled={step === Steps.Completed || !currentMessage.trim()}
+        style={{
+          backgroundColor: "#4caf50",
+          color: "white",
+          border: "none",
+          borderRadius: 24,
+          padding: "0 24px",
+          cursor: step === Steps.Completed || !currentMessage.trim() ? "not-allowed" : "pointer",
+          fontSize: 16,
+          fontWeight: "bold",
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          transition: "background-color 0.3s ease",
+        }}
+        onMouseEnter={(e) => {
+          if (step !== Steps.Completed && currentMessage.trim())
+            e.currentTarget.style.backgroundColor = "#45a049";
+        }}
+        onMouseLeave={(e) => {
+          if (step !== Steps.Completed && currentMessage.trim())
+            e.currentTarget.style.backgroundColor = "#4caf50";
+        }}  
+      >
+        Enviar
+      </button>
+    </form>
+  </div>
+);
+
+}
 
 export default ChatBot;
+
+

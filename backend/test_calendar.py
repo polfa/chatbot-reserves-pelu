@@ -1,14 +1,15 @@
-import sys
-import os
 
-# Afegeix el path absolut del projecte
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from backend.google_calendar import create_event
+from database.crud import eliminar_reserva
+from database.read_json_pelu import importar_dades_pelu
+from database.database import SessionLocal, engine
+from database import models
 
-create_event(
-    client_name="Pol",
-    service="Tallat",
-    iso_datetime="2025-06-19T17:00:00",
-    duration_minutes=30
-)
+
+models.Base.metadata.create_all(bind=engine)
+
+db = SessionLocal()
+
+eliminar_reserva(db, 1)
+#importar_dades_pelu("pelu_info.json", db)
+db.close()

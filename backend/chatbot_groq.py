@@ -15,7 +15,7 @@ client = OpenAI(
     base_url="https://api.groq.com/openai/v1"
 )
 
-MODEL = "compound-beta"  # Modelo potente y gratuito
+MODEL = "compound-beta"  # Modelo de chat gratuito
 
 # ======================
 # 1. Mensaje general del bot
