@@ -4,7 +4,7 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 from datetime import datetime
-from backend.validations import validate_iso_datetime, validate_name
+from backend.IA.validations import validate_iso_datetime, validate_name
 
 # Carga variables de entorno (.env)
 load_dotenv()

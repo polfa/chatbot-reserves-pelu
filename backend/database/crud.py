@@ -51,5 +51,14 @@ def get_minutes_for_service(db: Session, service: str):
     return None
 
 def get_empleats_by_service(db: Session, service: str):
-    empleats = db.query(models.Empleat).join(models.Reserva).filter(models.Reserva.service == service).distinct(models.Empleat.id).all()
-    return ", ".join(empleat.nom for empleat in empleats)
+    empleats = (
+        db.query(models.Empleat)
+        .join(models.Empleat.serveis)  # relació molts a molts amb la taula serveis
+        .filter(models.Servei.nom == service)
+        .all()
+    )
+    return [empleat.nom for empleat in empleats]
+
+def get_all_services(db: Session):
+    return db.query(models.Servei).all()
+

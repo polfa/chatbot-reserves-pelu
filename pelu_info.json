@@ -2,45 +2,47 @@
   "empleats": [
     {
       "nom": "Andrea",
-      "serveis": ["Tallat", "Color", "Rentat"],
+      "serveis": ["Corte", "Tinte", "Peinado"],
       "descripcio": "Especialitzada en coloració i assessorament d'imatge per a dones.",
       "punts_forts": ["Balayage", "Color personalitzat", "Tracte proper"]
     },
     {
       "nom": "Marc",
-      "serveis": ["Tallat", "Barba", "Rentat"],
+      "serveis": ["Corte", "Barba", "Peinado"],
       "descripcio": "Expert en tall masculí modern i arranjament de barba.",
       "punts_forts": ["Fade tall", "Degradats nets", "Tractaments de barba"]
     },
     {
       "nom": "Julia",
-      "serveis": ["Tallat", "Color", "Recollit", "Rentat"],
+      "serveis": ["Corte", "Tinte", "Peinado"],
       "descripcio": "Especialista en pentinats de cerimònia i tractaments de color avançats.",
       "punts_forts": ["Recollits de casament", "Coloració vegana", "Tractaments capil·lars"]
     }
   ],
-  "serveis_generals": ["Tallat", "Color", "Barba", "Rentat", "Recollit"],
+  "serveis_generals": ["Corte", "Tinte", "Barba", "Peinado", "Manicura", "Pedicura"],
   "temps_serveis": {
-    "Tallat": 30,
-    "Color": 60,
+    "Corte": 30,
+    "Tinte": 60,
     "Barba": 20,
-    "Rentat": 15,
-    "Recollit": 45
+    "Peinado": 15,
+    "Manicura": 45,
+    "Pedicura": 30
   },
   "preus_serveis": {
-    "Tallat": 18.0,
-    "Color": 35.0,
-    "Barba": 12.0,
-    "Rentat": 6.0,
-    "Recollit": 40.0
+    "Corte": 15,
+    "Tinte": 40,
+    "Barba": 10,
+    "Peinado": 12,
+    "Manicura": 25,
+    "Pedicura": 30
   },
   "horari": {
-    "dilluns": "TANCAT",
+    "dilluns": "9:00-14:00",
     "dimarts": "10:00-19:00",
     "dimecres": "10:00-19:00",
     "dijous": "10:00-19:00",
     "divendres": "10:00-19:00",
-    "dissabte": "9:00-14:00",
+    "dissabte": "TANCAT",
     "diumenge": "TANCAT"
   }
 }

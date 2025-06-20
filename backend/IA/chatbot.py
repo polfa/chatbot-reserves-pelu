@@ -3,7 +3,7 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 from datetime import datetime
-from backend.validations import validate_iso_datetime, validate_name
+from backend.IA.validations import validate_iso_datetime, validate_name
 
 
 load_dotenv()
@@ -86,6 +86,7 @@ def extract_service_from_message(message, services):
                     f"- Si el missatge és 'Em vull tallar el cabell', retorna: Tallat (si 'Tallat' és a la llista).\n"
                     f"- Si el missatge és 'Pintar ungles', retorna: ERROR.\n\n"
                     f"Només retorna un únic servei de la llista o la paraula ERROR. No afegeixis res més."
+                    f"SI ES UNA CONSULTA DEL SERVEI RETORNA: CONSULTA, ja que pot ser que estigui demanant info pero no escollint"
                 ),
             },
             {"role": "user", "content": message},
@@ -122,6 +123,35 @@ def extract_empleat_from_message(message, empleats):
         return c
     else:
         return "ERROR"
+
+
+def get_services_info(message, services):
+    # Preparamos la lista de servicios para mostrar en la instrucción
+    serveis_info = "\n".join([f"- {s.nom}: {s.duracio} min, {s.preu} euros" for s in services])
+
+    prompt = (
+        "Ets un assistent que rep un missatge on l'usuari pregunta per un servei de perruqueria (ex: tinte, tall, etc.) i/o "
+        "vol saber la durada i preu d'aquest servei.\n"
+        f"La llista de serveis disponibles és:\n{serveis_info}\n\n"
+        "Instruccions:\n"
+        "- Si el missatge conté clarament el nom d'un servei, respon només amb una frase clara i concreta amb la durada i preu, "
+        "per exemple: 'El tall dura uns 30 minuts i el preu és 15 euros.'\n"
+        "- Si el missatge no especifica cap servei o no és clar, respon amb una llista de tots els serveis amb durada i preu.\n"
+        "- No inventis informació ni facis correccions, només el que hi ha a les dades.\n"
+        "- Només has de respondre amb text clar i directe, res més.\n"
+        "- Si et parla en català respons en català, si et parla en castellà en castellà"
+    )
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": message}
+        ]
+    )
+    resposta = completion.choices[0].message.content.strip()
+    return resposta
+
     
 
 

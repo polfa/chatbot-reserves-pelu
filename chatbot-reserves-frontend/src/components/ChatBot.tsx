@@ -68,6 +68,10 @@ const ChatBot = () => {
         if (s === "ERROR") {
           addBotMessage("No entendí el tipo de servicio, por favor intenta de nuevo.");
           return;
+        }else if(s == "CONSULTA"){
+          const info = await api.getServiceInfo(trimmed)
+          addBotMessage(info);
+          return;
         }
         setService(s);
         const empleats_str = await api.getEmpleats(s);
@@ -76,14 +80,14 @@ const ChatBot = () => {
         break;
       }
       case Steps.AskEmpleat: {
+        if (trimmed === "NO") {
+          addBotMessage("Escribe el tipo de servicio que quieres reservar.");
+          setStep(Steps.AskService);
+          return;
+        }
         const e = await api.postEmpleatFromMessage(trimmed);
         if (e === "ERROR") {
           addBotMessage("No pude encontrar el empleado que te pidieron. Intenta algo como 'NO'");
-          return;
-        }
-        if (e === "NO") {
-          addBotMessage("Escribe el tipo de servicio que quieres reservar.");
-          setStep(Steps.AskService);
           return;
         }
         setWorkerName(e);

@@ -9,7 +9,5 @@ from database import models
 models.Base.metadata.create_all(bind=engine)
 
 db = SessionLocal()
-
-eliminar_reserva(db, 1)
-#importar_dades_pelu("pelu_info.json", db)
+importar_dades_pelu("pelu_info.json", db)
 db.close()

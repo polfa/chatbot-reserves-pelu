@@ -69,3 +69,12 @@ export const getEmpleats = async (message: string) => {
   }
 };
 
+export const getServiceInfo = async (message: string) => {
+  try {
+    const res = await axios.post("http://localhost:8000/get_services_info", { message });
+    return res.data.message
+  } catch {
+    return "ERROR";
+  }
+};
+
