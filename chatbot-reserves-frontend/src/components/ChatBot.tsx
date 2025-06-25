@@ -86,6 +86,11 @@ const ChatBot = () => {
           return;
         }
         const e = await api.postEmpleatFromMessage(trimmed);
+        if (e.includes("[$C]")) {
+          const novaCadena = e.replace("[$C]", "");
+          addBotMessage(novaCadena);
+          return;
+        }
         if (e === "ERROR") {
           addBotMessage("No pude encontrar el empleado que te pidieron. Intenta algo como 'NO'");
           return;
@@ -112,7 +117,7 @@ const ChatBot = () => {
         });
 
         if (success) {
-          addBotMessage("✅ ¡Reserva creada con éxito!");
+          addBotMessage(`✅ ¡Reserva creada con éxito! \nDetalles: ${isoDate} - ${service} - ${workerName}`);
         } else {
           addBotMessage("❌ Error al hacer la reserva.");
         }

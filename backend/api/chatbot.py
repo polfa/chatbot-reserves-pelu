@@ -4,54 +4,59 @@ from backend.IA import chatbot
 from backend.database import crud
 from backend.database.database import SessionLocal
 
-router = APIRouter()
-
 class Message(BaseModel):
     message: str = Field(..., example="Em dic Carla")
 
-@router.post("/bot_introduction")
-def get_introduction():
-    try:
-        response = chatbot.get_bot_introduction()
-        return {"message": response}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al resoldre la pregunta: {str(e)}")
+class ChatbotRouter:
+    def __init__(self, api_client_name: str = "openai"):
+        self.router = APIRouter()
+        self.chatbotAPI = chatbot.ChatbotAPI(client_name=api_client_name)
+        self._add_routes()
 
-@router.post("/date_from_message")
-def post_date(message: Message):
-    try:
-        response = chatbot.extract_date_from_message(message.message)
-        return {"message": response}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al resoldre la pregunta: {str(e)}")
+    def _add_routes(self):
+        self.router.post("/bot_introduction")(self.get_introduction)
+        self.router.post("/date_from_message")(self.post_date)
+        self.router.post("/name_from_message")(self.post_name)
+        self.router.post("/service_from_message")(self.service_from_message)
+        self.router.post("/get_services_info")(self.get_services_info)
 
-@router.post("/name_from_message")
-def post_name(message: Message):
-    try:
-        response = chatbot.extract_name_from_message(message.message)
-        return {"message": response}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al resoldre la pregunta: {str(e)}")
+    def get_introduction(self):
+        try:
+            response = self.chatbotAPI.get_bot_introduction()
+            return {"message": response}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error al resoldre la pregunta: {str(e)}")
 
-@router.post("/service_from_message")
-def service_from_message(message: Message):
-    try:
-        db = SessionLocal()
-        services = crud.get_services(db)
-        response = chatbot.extract_service_from_message(message.message, services)
-        db.close()
-        return {"message": response}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al resoldre la pregunta: {str(e)}")
+    def post_date(self, message: Message):
+        try:
+            response = self.chatbotAPI.extract_date_from_message(message.message)
+            return {"message": response}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error al resoldre la pregunta: {str(e)}")
 
+    def post_name(self, message: Message):
+        try:
+            response = self.chatbotAPI.extract_name_from_message(message.message)
+            return {"message": response}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error al resoldre la pregunta: {str(e)}")
 
-@router.post("/get_services_info")
-def get_services_info(message: Message):
-    try:
-        db = SessionLocal()
-        services = crud.get_all_services(db)
-        response = chatbot.get_services_info(message.message, services)
-        db.close()
-        return {"message": response}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al resoldre la pregunta: {str(e)}")
+    def service_from_message(self, message: Message):
+        try:
+            db = SessionLocal()
+            services = crud.get_services(db)
+            response = self.chatbotAPI.extract_service_from_message(message.message, services)
+            db.close()
+            return {"message": response}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error al resoldre la pregunta: {str(e)}")
+
+    def get_services_info(self, message: Message):
+        try:
+            db = SessionLocal()
+            services = crud.get_all_services(db)
+            response = self.chatbotAPI.get_services_info(message.message, services)
+            db.close()
+            return {"message": response}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error al resoldre la pregunta: {str(e)}")

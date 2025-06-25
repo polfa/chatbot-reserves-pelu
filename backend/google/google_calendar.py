@@ -36,7 +36,7 @@ def authenticate_google():
             pickle.dump(creds, token)
     return creds
 
-def create_event(client_name, service, iso_datetime, duration_minutes):
+def create_event(client_name, service, iso_datetime, duration_minutes, nom_empleat):
     creds = authenticate_google()
     service_api = build("calendar", "v3", credentials=creds)
 
@@ -45,8 +45,8 @@ def create_event(client_name, service, iso_datetime, duration_minutes):
     end = end_dt.isoformat()
 
     event = {
-        "summary": f"{service} - {client_name}",
-        "description": f"Reserva per {client_name}, servei: {service}",
+        "summary": f"{service} - {client_name} | Amb {nom_empleat}",
+        "description": f"Reserva per {client_name}, servei: {service}, Empleat: {nom_empleat}",
         "start": {
             "dateTime": start,
             "timeZone": "Europe/Madrid",  # ajusta si cal

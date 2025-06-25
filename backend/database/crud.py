@@ -42,6 +42,10 @@ def get_empleats_str(db: Session):
 
 def get_empleats_list(db: Session):
     empleats = db.query(models.Empleat).all()
+    return [empleat for empleat in empleats]
+
+def get_empleats_list_noms(db: Session):
+    empleats = db.query(models.Empleat).all()
     return [empleat.nom for empleat in empleats]
 
 def get_minutes_for_service(db: Session, service: str):
@@ -62,3 +66,5 @@ def get_empleats_by_service(db: Session, service: str):
 def get_all_services(db: Session):
     return db.query(models.Servei).all()
 
+def get_descripcions_empleats(db: Session):
+    return db.query(models.Empleat).all()
